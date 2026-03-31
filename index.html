@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#a63c06">
+  <title>Noodles Checkpoint Audit</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Phone-first Audit Tool</p>
+        <h1>Noodles Checkpoint Audit</h1>
+        <p class="hero-text">
+          Tap through each checkpoint, add notes only when needed, and export the finished audit when you are done.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button id="install-button" class="button ghost hidden" type="button">Install App</button>
+        <button id="download-template-button" class="button ghost" type="button">Download Template</button>
+        <button id="export-button" class="button primary" type="button">Export Audit</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel import-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">Checklist Setup</p>
+            <h2>Load your audit items</h2>
+          </div>
+          <span id="checklist-badge" class="badge">Workbook checklist loaded</span>
+        </div>
+
+        <div class="import-grid">
+          <label class="upload-card" for="file-input">
+            <input id="file-input" type="file" accept=".csv,text/csv" hidden>
+            <span class="upload-title">Import CSV</span>
+            <span class="upload-copy">Save your Excel sheet as CSV, then load it here.</span>
+          </label>
+
+          <button id="toggle-paste-button" class="upload-card interactive" type="button">
+            <span class="upload-title">Paste from Excel</span>
+            <span class="upload-copy">Copy rows from Excel or Google Sheets and paste them directly.</span>
+          </button>
+
+          <button id="reset-demo-button" class="upload-card interactive" type="button">
+            <span class="upload-title">Reload Built-in Audit</span>
+            <span class="upload-copy">Switch back to the checklist pulled from your workbook.</span>
+          </button>
+        </div>
+
+        <div id="paste-panel" class="paste-panel hidden">
+          <label for="paste-input">Paste a table with headers like <code>section</code>, <code>item</code>, <code>points</code>, <code>details</code>, and <code>notes placeholder</code>.</label>
+          <textarea id="paste-input" rows="7" placeholder="section	item	points	details
+Kitchen	Broth station stocked	2	Check labels and fill levels"></textarea>
+          <div class="inline-actions">
+            <button id="import-paste-button" class="button primary" type="button">Import Pasted Rows</button>
+            <button id="cancel-paste-button" class="button ghost" type="button">Close</button>
+          </div>
+        </div>
+
+        <p class="hint">
+          Recommended columns: <code>section</code>, <code>item</code>, <code>points</code>, <code>details</code>, <code>notes placeholder</code>.
+          If you include <code>points</code>, the app creates tap buttons from full credit down to zero plus <code>N/A</code>.
+        </p>
+      </section>
+
+      <section class="top-grid">
+        <section class="panel metadata-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Audit Details</p>
+              <h2>Session info</h2>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              <span>Audit name</span>
+              <input id="audit-name" type="text" placeholder="Dinner Close Audit">
+            </label>
+            <label>
+              <span>Date</span>
+              <input id="audit-date" type="date">
+            </label>
+            <label>
+              <span>Auditor</span>
+              <input id="auditor-name" type="text" placeholder="Your name">
+            </label>
+            <label>
+              <span>Location</span>
+              <input id="location-name" type="text" placeholder="Store or site">
+            </label>
+            <label>
+              <span>Shift</span>
+              <input id="shift-name" type="text" placeholder="AM, PM, Close">
+            </label>
+          </div>
+        </section>
+
+        <section class="panel summary-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Progress</p>
+              <h2>Audit snapshot</h2>
+            </div>
+          </div>
+
+          <div class="summary-ring">
+            <div class="ring-shell">
+              <div id="progress-ring" class="ring-fill"></div>
+              <div class="ring-center">
+                <strong id="progress-percent">0%</strong>
+                <span>complete</span>
+              </div>
+            </div>
+            <div class="summary-list">
+              <div class="summary-item">
+                <span>Items</span>
+                <strong id="item-count">0</strong>
+              </div>
+              <div class="summary-item">
+                <span>Answered</span>
+                <strong id="answered-count">0</strong>
+              </div>
+              <div class="summary-item">
+                <span>Score</span>
+                <strong id="score-count">0 / 0</strong>
+              </div>
+              <div class="summary-item">
+                <span>Notes added</span>
+                <strong id="notes-count">0</strong>
+              </div>
+              <div class="summary-item">
+                <span>Possible points</span>
+                <strong id="possible-count">0</strong>
+              </div>
+              <div class="summary-item accent">
+                <span>Still open</span>
+                <strong id="remaining-count">0</strong>
+              </div>
+            </div>
+          </div>
+
+          <div id="answer-breakdown" class="breakdown"></div>
+        </section>
+      </section>
+
+      <section class="panel checklist-panel">
+        <div class="panel-heading checklist-header">
+          <div>
+            <p class="panel-kicker">Checklist</p>
+            <h2 id="checklist-title">Checkpoint items</h2>
+          </div>
+          <div id="autosave-status" class="autosave">Autosaved</div>
+        </div>
+
+        <div id="checklist-container" class="checklist-container"></div>
+      </section>
+    </main>
+
+    <footer class="sticky-bar">
+      <div>
+        <span class="sticky-label">Incomplete items</span>
+        <strong id="sticky-remaining">0</strong>
+      </div>
+      <div class="sticky-actions">
+        <button id="jump-button" class="button ghost" type="button">Jump to Next</button>
+        <button id="sticky-export-button" class="button primary" type="button">Export</button>
+      </div>
+    </footer>
+  </div>
+
+  <template id="section-template">
+    <section class="audit-section">
+      <div class="section-head">
+        <div>
+          <h3></h3>
+          <p class="section-subtitle"></p>
+        </div>
+        <span class="section-pill"></span>
+      </div>
+      <div class="section-items"></div>
+    </section>
+  </template>
+
+  <template id="item-template">
+    <article class="audit-item">
+      <div class="item-copy">
+        <div class="item-title-row">
+          <h4></h4>
+          <span class="item-status">Pending</span>
+        </div>
+        <p class="item-details hidden"></p>
+      </div>
+      <div class="choice-group" role="group" aria-label="Checkpoint choices"></div>
+      <label class="notes-field">
+        <span>Notes</span>
+        <textarea rows="3" placeholder="Add details if needed"></textarea>
+      </label>
+    </article>
+  </template>
+
+  <script src="checklist-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

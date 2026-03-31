@@ -1,0 +1,16 @@
+{
+  "name": "Noodles Checkpoint Audit",
+  "short_name": "Noodles Audit",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fff5df",
+  "theme_color": "#a63c06",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
