@@ -114,7 +114,8 @@ button {
 
 .hero-actions,
 .inline-actions,
-.sticky-actions {
+.sticky-actions,
+.share-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -348,6 +349,85 @@ textarea:focus,
   font-weight: 700;
 }
 
+.share-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 0.95fr 1.05fr;
+}
+
+.report-card,
+.report-list-card {
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(97, 36, 11, 0.1);
+}
+
+.report-score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 18px;
+}
+
+.report-label {
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.report-score,
+.report-grade {
+  display: block;
+  line-height: 1;
+}
+
+.report-score {
+  font-size: clamp(2rem, 6vw, 3rem);
+}
+
+.report-grade-shell {
+  text-align: right;
+}
+
+.report-grade {
+  min-width: 84px;
+  padding: 14px 18px;
+  border-radius: 20px;
+  background: rgba(166, 60, 6, 0.12);
+  font-size: 2rem;
+}
+
+.manager-overview {
+  margin: 18px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.report-list-card {
+  display: grid;
+  gap: 16px;
+}
+
+.report-list-block h3 {
+  margin: 0 0 10px;
+}
+
+.report-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.share-actions {
+  margin-top: 18px;
+}
+
 .checklist-header {
   margin-bottom: 12px;
 }
@@ -466,6 +546,10 @@ textarea:focus,
   .top-grid {
     grid-template-columns: 1fr;
   }
+
+  .share-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -483,6 +567,7 @@ textarea:focus,
   .hero-actions,
   .inline-actions,
   .sticky-actions,
+  .share-actions,
   .choice-group {
     display: grid;
     grid-template-columns: 1fr;

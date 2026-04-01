@@ -1,4 +1,4 @@
-const CACHE_NAME = "noodles-checkpoint-audit-v1";
+const CACHE_NAME = "noodles-checkpoint-audit-v2";
 const APP_FILES = [
   "./",
   "./index.html",

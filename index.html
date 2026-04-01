@@ -16,13 +16,13 @@
         <p class="eyebrow">Phone-first Audit Tool</p>
         <h1>Noodles Checkpoint Audit</h1>
         <p class="hero-text">
-          Tap through each checkpoint, add notes only when needed, and export the finished audit when you are done.
+          Tap through each checkpoint, add notes only when needed, then turn the finished audit into a manager-ready summary you can email, share, or print to PDF.
         </p>
       </div>
       <div class="hero-actions">
         <button id="install-button" class="button ghost hidden" type="button">Install App</button>
         <button id="download-template-button" class="button ghost" type="button">Download Template</button>
-        <button id="export-button" class="button primary" type="button">Export Audit</button>
+        <button id="export-button" class="button primary" type="button">Export CSV</button>
       </div>
     </header>
 
@@ -100,6 +100,10 @@ Kitchen	Broth station stocked	2	Check labels and fill levels"></textarea>
               <span>Shift</span>
               <input id="shift-name" type="text" placeholder="AM, PM, Close">
             </label>
+            <label>
+              <span>GM email</span>
+              <input id="recipient-email" type="email" placeholder="gm@store.com">
+            </label>
           </div>
         </section>
 
@@ -151,6 +155,56 @@ Kitchen	Broth station stocked	2	Check labels and fill levels"></textarea>
         </section>
       </section>
 
+      <section class="panel share-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">Shareable Report</p>
+            <h2>Manager summary</h2>
+          </div>
+        </div>
+
+        <div class="share-grid">
+          <section class="report-card">
+            <div class="report-score-row">
+              <div>
+                <p class="report-label">Final score</p>
+                <strong id="manager-score" class="report-score">0 / 0</strong>
+              </div>
+              <div class="report-grade-shell">
+                <span class="report-label">Grade</span>
+                <strong id="manager-grade" class="report-grade">--</strong>
+              </div>
+            </div>
+            <p id="manager-overview" class="manager-overview">
+              Finish the audit to generate a clean manager-ready summary.
+            </p>
+          </section>
+
+          <section class="report-list-card">
+            <div class="report-list-block">
+              <h3>What went well</h3>
+              <ul id="strength-list" class="report-list"></ul>
+            </div>
+            <div class="report-list-block">
+              <h3>Needs attention</h3>
+              <ul id="focus-list" class="report-list"></ul>
+            </div>
+            <div class="report-list-block">
+              <h3>Notes to mention</h3>
+              <ul id="note-list" class="report-list"></ul>
+            </div>
+          </section>
+        </div>
+
+        <div class="share-actions">
+          <button id="summary-button" class="button ghost" type="button">Open Summary</button>
+          <button id="email-button" class="button ghost" type="button">Email GM</button>
+          <button id="share-button" class="button ghost" type="button">Share</button>
+          <button id="print-button" class="button ghost" type="button">Print / PDF</button>
+          <button id="chatgpt-button" class="button primary" type="button">Copy for ChatGPT</button>
+        </div>
+      </section>
+
       <section class="panel checklist-panel">
         <div class="panel-heading checklist-header">
           <div>
@@ -171,7 +225,7 @@ Kitchen	Broth station stocked	2	Check labels and fill levels"></textarea>
       </div>
       <div class="sticky-actions">
         <button id="jump-button" class="button ghost" type="button">Jump to Next</button>
-        <button id="sticky-export-button" class="button primary" type="button">Export</button>
+        <button id="sticky-export-button" class="button primary" type="button">Export CSV</button>
       </div>
     </footer>
   </div>
