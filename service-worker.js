@@ -1,4 +1,4 @@
-const CACHE_NAME = "noodles-checkpoint-audit-v2";
+const CACHE_NAME = "noodles-checkpoint-audit-v3";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -6,7 +6,10 @@ const APP_FILES = [
   "./checklist-data.js",
   "./app.js",
   "./manifest.webmanifest",
-  "./icon.svg"
+  "./icon.svg",
+  "./apple-touch-icon.png",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {

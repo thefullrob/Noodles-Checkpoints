@@ -1,4 +1,10 @@
 window.NOODLES_DEFAULT_CHECKLIST = [
+  { section: "Exterior & Patio", item: "Parking Lot / Sidewalks", maxPoints: 4 },
+  { section: "Exterior & Patio", item: "Table are Clean", maxPoints: 1 },
+  { section: "Exterior & Patio", item: "Umbrellas are up", maxPoints: 1 },
+  { section: "Exterior & Patio", item: "Music is on", maxPoints: 1 },
+  { section: "Exterior & Patio", item: "Mullions are clean", maxPoints: 1 },
+
   { section: "FOH Cleaninliness", item: "Floors", maxPoints: 2 },
   { section: "FOH Cleaninliness", item: "Table", maxPoints: 2 },
   { section: "FOH Cleaninliness", item: "Booth Dividers", maxPoints: 2 },
@@ -11,12 +17,6 @@ window.NOODLES_DEFAULT_CHECKLIST = [
   { section: "FOH Cleaninliness", item: "Temperature in Dining Room", maxPoints: 3 },
   { section: "FOH Cleaninliness", item: "Appropriate Music Playlist At Good Volume", maxPoints: 4 },
   { section: "FOH Cleaninliness", item: "Bussing Tables (15 minutes max)", maxPoints: 2 },
-
-  { section: "Exterior & Patio", item: "Parking Lot / Sidewalks", maxPoints: 4 },
-  { section: "Exterior & Patio", item: "Table are Clean", maxPoints: 1 },
-  { section: "Exterior & Patio", item: "Umbrellas are up", maxPoints: 1 },
-  { section: "Exterior & Patio", item: "Music is on", maxPoints: 1 },
-  { section: "Exterior & Patio", item: "Mullions are clean", maxPoints: 1 },
 
   { section: "BOH", item: "Kitchen Floors", maxPoints: 2 },
   { section: "BOH", item: "Back Area Floors", maxPoints: 2 },
