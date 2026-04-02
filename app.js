@@ -15,7 +15,6 @@ const state = {
   checklistLabel: BUILT_IN_LABEL,
   responses: {},
   metadata: {
-    auditName: "",
     auditDate: "",
     auditorName: "",
     locationName: "",
@@ -27,8 +26,6 @@ const state = {
 const els = {
   checklistContainer: document.getElementById("checklist-container"),
   checklistTitle: document.getElementById("checklist-title"),
-  checklistBadge: document.getElementById("checklist-badge"),
-  auditName: document.getElementById("audit-name"),
   auditDate: document.getElementById("audit-date"),
   auditorName: document.getElementById("auditor-name"),
   locationName: document.getElementById("location-name"),
@@ -50,16 +47,8 @@ const els = {
   strengthList: document.getElementById("strength-list"),
   focusList: document.getElementById("focus-list"),
   noteList: document.getElementById("note-list"),
-  fileInput: document.getElementById("file-input"),
-  togglePasteButton: document.getElementById("toggle-paste-button"),
-  pastePanel: document.getElementById("paste-panel"),
-  pasteInput: document.getElementById("paste-input"),
-  importPasteButton: document.getElementById("import-paste-button"),
-  cancelPasteButton: document.getElementById("cancel-paste-button"),
   exportButton: document.getElementById("export-button"),
   clearAuditButton: document.getElementById("clear-audit-button"),
-  downloadTemplateButton: document.getElementById("download-template-button"),
-  resetDemoButton: document.getElementById("reset-demo-button"),
   jumpButton: document.getElementById("jump-button"),
   installButton: document.getElementById("install-button"),
   summaryButton: document.getElementById("summary-button"),
@@ -111,30 +100,11 @@ function hydrateState() {
   if (!state.metadata.auditDate) {
     state.metadata.auditDate = new Date().toISOString().slice(0, 10);
   }
-  if (!state.metadata.auditName) {
-    state.metadata.auditName = state.checklistLabel;
-  }
 }
 
 function bindEvents() {
-  els.fileInput.addEventListener("change", handleFileImport);
-  els.togglePasteButton.addEventListener("click", () => {
-    els.pastePanel.classList.toggle("hidden");
-    if (!els.pastePanel.classList.contains("hidden")) {
-      els.pasteInput.focus();
-    }
-  });
-  els.importPasteButton.addEventListener("click", importPastedRows);
-  els.cancelPasteButton.addEventListener("click", () => {
-    els.pastePanel.classList.add("hidden");
-    els.pasteInput.value = "";
-  });
   els.exportButton.addEventListener("click", exportAudit);
   els.clearAuditButton.addEventListener("click", clearAuditData);
-  els.downloadTemplateButton.addEventListener("click", downloadTemplate);
-  els.resetDemoButton.addEventListener("click", () => {
-    setChecklist(BUILT_IN_CHECKLIST, BUILT_IN_LABEL);
-  });
   els.jumpButton.addEventListener("click", jumpToNextIncomplete);
   els.installButton.addEventListener("click", promptInstall);
   els.summaryButton.addEventListener("click", () => openSummaryWindow(false));
@@ -149,18 +119,19 @@ function bindEvents() {
   }
 
   for (const [key, input] of Object.entries({
-    auditName: els.auditName,
     auditDate: els.auditDate,
     auditorName: els.auditorName,
     locationName: els.locationName,
     shiftName: els.shiftName,
     recipientEmail: els.recipientEmail
   })) {
-    input.addEventListener("input", (event) => {
+    const updateMetadata = (event) => {
       state.metadata[key] = event.target.value;
       persistDraft();
       renderManagerSummary();
-    });
+    };
+    input.addEventListener("input", updateMetadata);
+    input.addEventListener("change", updateMetadata);
   }
 
   els.checklistContainer.addEventListener("click", handleChecklistClick);
@@ -191,14 +162,12 @@ function renderAll() {
 }
 
 function renderMetadata() {
-  els.auditName.value = state.metadata.auditName;
   els.auditDate.value = state.metadata.auditDate;
   els.auditorName.value = state.metadata.auditorName;
   els.locationName.value = state.metadata.locationName;
   els.shiftName.value = state.metadata.shiftName;
   els.recipientEmail.value = state.metadata.recipientEmail;
   els.checklistTitle.textContent = state.checklistLabel;
-  els.checklistBadge.textContent = `${state.checklistLabel} (${state.checklist.length} items)`;
 }
 
 function renderChecklist() {
@@ -400,7 +369,6 @@ function setChecklist(sourceRows, label) {
   state.responses = {};
   state.metadata = {
     ...state.metadata,
-    auditName: label,
     auditDate: state.metadata.auditDate || new Date().toISOString().slice(0, 10)
   };
 
@@ -421,7 +389,6 @@ function clearAuditData() {
   localStorage.removeItem(getDraftStorageKey());
   state.responses = {};
   state.metadata = {
-    auditName: state.checklistLabel,
     auditDate: new Date().toISOString().slice(0, 10),
     auditorName: "",
     locationName: "",
@@ -458,7 +425,7 @@ function exportAudit() {
   const rows = state.checklist.map((item) => {
     const response = getResponse(item.id);
     return {
-      audit_name: state.metadata.auditName || state.checklistLabel,
+      audit_name: state.checklistLabel,
       audit_date: state.metadata.auditDate,
       auditor: state.metadata.auditorName,
       location: state.metadata.locationName,
@@ -473,7 +440,7 @@ function exportAudit() {
   });
 
   const csv = toCsv(rows);
-  const baseName = slugify(state.metadata.auditName || state.checklistLabel || "audit");
+  const baseName = slugify(state.checklistLabel || "audit");
   downloadTextFile(`${baseName || "audit"}-results.csv`, csv, "text/csv;charset=utf-8");
 }
 
@@ -900,7 +867,7 @@ function buildEmailSubject(report) {
 
 function buildManagerPlainText(report = buildManagerReportData()) {
   const lines = [
-    `${state.metadata.auditName || state.checklistLabel}`,
+    `${state.checklistLabel}`,
     `Date: ${state.metadata.auditDate || "Not set"}`,
     `Location: ${state.metadata.locationName || "Not set"}`,
     `Auditor: ${state.metadata.auditorName || "Not set"}`,
@@ -972,7 +939,7 @@ function buildChatGPTPrompt(report = buildManagerReportData()) {
     "Make it clean enough to turn into a PDF or email update.",
     "",
     "AUDIT DATA",
-    `Audit name: ${state.metadata.auditName || state.checklistLabel}`,
+    `Audit name: ${state.checklistLabel}`,
     `Date: ${state.metadata.auditDate || "Not set"}`,
     `Location: ${state.metadata.locationName || "Not set"}`,
     `Auditor: ${state.metadata.auditorName || "Not set"}`,
@@ -1094,7 +1061,7 @@ function buildManagerHtmlDocument(report) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(state.metadata.auditName || state.checklistLabel)} Summary</title>
+  <title>${escapeHtml(state.checklistLabel)} Summary</title>
   <style>
     :root {
       --ink: #2f1a0d;
@@ -1243,7 +1210,7 @@ function buildManagerHtmlDocument(report) {
     <div class="top">
       <section>
         <p class="eyebrow">Manager Summary</p>
-        <h1>${escapeHtml(state.metadata.auditName || state.checklistLabel)}</h1>
+        <h1>${escapeHtml(state.checklistLabel)}</h1>
         <p class="lede">${escapeHtml(report.overview)}</p>
       </section>
       <section class="score-card">

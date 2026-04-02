@@ -51,6 +51,7 @@ body::before {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -195,7 +196,8 @@ button {
 
 .paste-panel textarea,
 textarea,
-input {
+input,
+select {
   width: 100%;
   border: 1px solid rgba(97, 36, 11, 0.14);
   border-radius: var(--radius-md);
@@ -209,6 +211,7 @@ textarea {
 }
 
 input:focus,
+select:focus,
 textarea:focus,
 .button:focus-visible,
 .choice-button:focus-visible,

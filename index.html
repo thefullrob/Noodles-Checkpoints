@@ -21,56 +21,12 @@
       </div>
       <div class="hero-actions">
         <button id="install-button" class="button ghost hidden" type="button">Install App</button>
-        <button id="download-template-button" class="button ghost" type="button">Download Template</button>
         <button id="clear-audit-button" class="button danger" type="button">Clear Audit</button>
         <button id="export-button" class="button primary" type="button">Export CSV</button>
       </div>
     </header>
 
     <main class="layout">
-      <section class="panel import-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="panel-kicker">Checklist Setup</p>
-            <h2>Load your audit items</h2>
-          </div>
-          <span id="checklist-badge" class="badge">Workbook checklist loaded</span>
-        </div>
-
-        <div class="import-grid">
-          <label class="upload-card" for="file-input">
-            <input id="file-input" type="file" accept=".csv,text/csv" hidden>
-            <span class="upload-title">Import CSV</span>
-            <span class="upload-copy">Save your Excel sheet as CSV, then load it here.</span>
-          </label>
-
-          <button id="toggle-paste-button" class="upload-card interactive" type="button">
-            <span class="upload-title">Paste from Excel</span>
-            <span class="upload-copy">Copy rows from Excel or Google Sheets and paste them directly.</span>
-          </button>
-
-          <button id="reset-demo-button" class="upload-card interactive" type="button">
-            <span class="upload-title">Reload Built-in Audit</span>
-            <span class="upload-copy">Switch back to the checklist pulled from your workbook.</span>
-          </button>
-        </div>
-
-        <div id="paste-panel" class="paste-panel hidden">
-          <label for="paste-input">Paste a table with headers like <code>section</code>, <code>item</code>, <code>points</code>, <code>details</code>, and <code>notes placeholder</code>.</label>
-          <textarea id="paste-input" rows="7" placeholder="section	item	points	details
-Kitchen	Broth station stocked	2	Check labels and fill levels"></textarea>
-          <div class="inline-actions">
-            <button id="import-paste-button" class="button primary" type="button">Import Pasted Rows</button>
-            <button id="cancel-paste-button" class="button ghost" type="button">Close</button>
-          </div>
-        </div>
-
-        <p class="hint">
-          Recommended columns: <code>section</code>, <code>item</code>, <code>points</code>, <code>details</code>, <code>notes placeholder</code>.
-          If you include <code>points</code>, the app creates tap buttons from full credit down to zero plus <code>N/A</code>.
-        </p>
-      </section>
-
       <section class="top-grid">
         <section class="panel metadata-panel">
           <div class="panel-heading">
@@ -81,10 +37,6 @@ Kitchen	Broth station stocked	2	Check labels and fill levels"></textarea>
           </div>
 
           <div class="form-grid">
-            <label>
-              <span>Audit name</span>
-              <input id="audit-name" type="text" placeholder="Dinner Close Audit">
-            </label>
             <label>
               <span>Date</span>
               <input id="audit-date" type="date">
@@ -99,11 +51,24 @@ Kitchen	Broth station stocked	2	Check labels and fill levels"></textarea>
             </label>
             <label>
               <span>Shift</span>
-              <input id="shift-name" type="text" placeholder="AM, PM, Close">
+              <select id="shift-name">
+                <option value="">Select shift</option>
+                <option value="LUNCH">LUNCH</option>
+                <option value="MID">MID</option>
+                <option value="DINNER">DINNER</option>
+              </select>
             </label>
             <label>
               <span>GM email</span>
-              <input id="recipient-email" type="email" placeholder="gm@store.com">
+              <select id="recipient-email">
+                <option value="">Select email</option>
+                <option value="bishopscorner@hartfordnoodles.com">bishopscorner@hartfordnoodles.com</option>
+                <option value="southington@hartfordnoodles.com">southington@hartfordnoodles.com</option>
+                <option value="manchester@hartfordnoodles.com">manchester@hartfordnoodles.com</option>
+                <option value="middletown@hartfordnoodles.com">middletown@hartfordnoodles.com</option>
+                <option value="mohamed@hartfordnoodles.com">mohamed@hartfordnoodles.com</option>
+                <option value="robert@hartfordnoodles.com">robert@hartfordnoodles.com</option>
+              </select>
             </label>
           </div>
         </section>
@@ -199,7 +164,7 @@ Kitchen	Broth station stocked	2	Check labels and fill levels"></textarea>
 
         <div class="share-actions">
           <button id="summary-button" class="button ghost" type="button">Open Summary</button>
-          <button id="email-button" class="button ghost" type="button">Email GM</button>
+          <button id="email-button" class="button ghost" type="button">Email Audit</button>
           <button id="share-button" class="button ghost" type="button">Share</button>
           <button id="print-button" class="button ghost" type="button">Print / PDF</button>
           <button id="chatgpt-button" class="button primary" type="button">Copy for ChatGPT</button>

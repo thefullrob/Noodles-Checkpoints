@@ -9,7 +9,7 @@ window.NOODLES_DEFAULT_CHECKLIST = [
   { section: "FOH Cleaninliness", item: "Bus Station", maxPoints: 3 },
   { section: "FOH Cleaninliness", item: "Bathrooms (air freshener, clean, stocked)", maxPoints: 4 },
   { section: "FOH Cleaninliness", item: "Temperature in Dining Room", maxPoints: 3 },
-  { section: "FOH Cleaninliness", item: "Glastonbury's Playlist At Good Volume", maxPoints: 4 },
+  { section: "FOH Cleaninliness", item: "Appropriate Music Playlist At Good Volume", maxPoints: 4 },
   { section: "FOH Cleaninliness", item: "Bussing Tables (15 minutes max)", maxPoints: 2 },
 
   { section: "Exterior & Patio", item: "Parking Lot / Sidewalks", maxPoints: 4 },
