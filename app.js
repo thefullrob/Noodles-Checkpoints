@@ -9,6 +9,12 @@ const BUILT_IN_LABEL = "CheckPoints Version 4";
 const BUILT_IN_CHECKLIST = Array.isArray(window.NOODLES_DEFAULT_CHECKLIST)
   ? window.NOODLES_DEFAULT_CHECKLIST
   : [];
+const LOCATION_EMAILS = {
+  "Bishops Corner": "bishopscorner@hartfordnoodles.com",
+  Southington: "southington@hartfordnoodles.com",
+  Manchester: "manchester@hartfordnoodles.com",
+  Middletown: "middletown@hartfordnoodles.com"
+};
 
 const state = {
   checklist: [],
@@ -47,10 +53,10 @@ const els = {
   strengthList: document.getElementById("strength-list"),
   focusList: document.getElementById("focus-list"),
   noteList: document.getElementById("note-list"),
-  exportButton: document.getElementById("export-button"),
   clearAuditButton: document.getElementById("clear-audit-button"),
   jumpButton: document.getElementById("jump-button"),
   installButton: document.getElementById("install-button"),
+  primaryShareButton: document.getElementById("primary-share-button"),
   summaryButton: document.getElementById("summary-button"),
   emailButton: document.getElementById("email-button"),
   shareButton: document.getElementById("share-button"),
@@ -103,10 +109,10 @@ function hydrateState() {
 }
 
 function bindEvents() {
-  els.exportButton.addEventListener("click", exportAudit);
   els.clearAuditButton.addEventListener("click", clearAuditData);
   els.jumpButton.addEventListener("click", jumpToNextIncomplete);
   els.installButton.addEventListener("click", promptInstall);
+  els.primaryShareButton.addEventListener("click", shareReport);
   els.summaryButton.addEventListener("click", () => openSummaryWindow(false));
   els.emailButton.addEventListener("click", emailSummary);
   els.printButton.addEventListener("click", () => openSummaryWindow(true));
@@ -127,7 +133,13 @@ function bindEvents() {
   })) {
     const updateMetadata = (event) => {
       state.metadata[key] = event.target.value;
+      if (key === "locationName") {
+        const autoEmail = LOCATION_EMAILS[event.target.value] || "";
+        state.metadata.recipientEmail = autoEmail;
+        els.recipientEmail.value = autoEmail;
+      }
       persistDraft();
+      renderMetadata();
       renderManagerSummary();
     };
     input.addEventListener("input", updateMetadata);
@@ -1009,6 +1021,15 @@ async function emailSummary() {
     downloadTextFile("audit-email.txt", clipboardPayload, "text/plain;charset=utf-8");
     alert("Your browser blocked the web compose window, so I tried your desktop mail app and downloaded the email text as a backup.");
   }
+}
+
+async function shareReport() {
+  if (navigator.share) {
+    await shareSummary();
+    return;
+  }
+
+  await emailSummary();
 }
 
 async function shareSummary() {

@@ -29,8 +29,6 @@
       </div>
       <div class="hero-actions">
         <button id="install-button" class="button ghost hidden" type="button">Install App</button>
-        <button id="clear-audit-button" class="button danger" type="button">Clear Audit</button>
-        <button id="export-button" class="button primary" type="button">Export CSV</button>
       </div>
     </header>
 
@@ -73,7 +71,7 @@
               </select>
             </label>
             <label>
-              <span>GM email</span>
+              <span>Email Audit</span>
               <select id="recipient-email">
                 <option value="">Select email</option>
                 <option value="bishopscorner@hartfordnoodles.com">bishopscorner@hartfordnoodles.com</option>
@@ -83,6 +81,7 @@
                 <option value="mohamed@hartfordnoodles.com">mohamed@hartfordnoodles.com</option>
                 <option value="robert@hartfordnoodles.com">robert@hartfordnoodles.com</option>
               </select>
+              <small class="field-note">Auto-filled from location. You can change it if needed.</small>
             </label>
           </div>
         </section>
@@ -176,13 +175,21 @@
           </section>
         </div>
 
-        <div class="share-actions">
-          <button id="summary-button" class="button ghost" type="button">Open Summary</button>
-          <button id="email-button" class="button ghost" type="button">Email Audit</button>
-          <button id="share-button" class="button ghost" type="button">Share</button>
-          <button id="print-button" class="button ghost" type="button">Print / PDF</button>
-          <button id="chatgpt-button" class="button primary" type="button">Copy for ChatGPT</button>
+        <div class="share-primary-actions">
+          <button id="primary-share-button" class="button primary" type="button">Share Report</button>
+          <button id="summary-button" class="button ghost" type="button">Preview PDF</button>
         </div>
+
+        <details class="action-menu">
+          <summary class="action-menu-summary">More Actions</summary>
+          <div class="share-actions">
+            <button id="email-button" class="button ghost" type="button">Email Audit</button>
+            <button id="share-button" class="button ghost" type="button">Native Share</button>
+            <button id="print-button" class="button ghost" type="button">Print / PDF</button>
+            <button id="chatgpt-button" class="button ghost" type="button">Copy for ChatGPT</button>
+            <button id="clear-audit-button" class="button danger" type="button">Clear Audit</button>
+          </div>
+        </details>
       </section>
 
       <section class="panel checklist-panel">
