@@ -929,14 +929,30 @@ function buildChatGPTPrompt(report = buildManagerReportData()) {
   return [
     "Create a polished, manager-ready audit summary from the data below.",
     "Write it in a supportive but direct operations tone.",
+    "The final deliverable should be a clean, professional PDF report.",
+    "Format the response specifically so it can be exported directly as a PDF for leadership review.",
+    "Do not invent facts, numbers, locations, names, action items, or explanations that are not supported by the audit data.",
+    "If something is missing, say it was not provided rather than guessing.",
+    "Keep the wording concise, operational, and consistent from report to report.",
+    "Do not use emojis, marketing language, or overly dramatic phrasing.",
+    "Use clean section headings and bullet points where appropriate so the formatting stays consistent in PDF form.",
+    "Use this exact section order and these exact headings:",
     "Include these sections:",
-    "1. Executive summary",
-    "2. Score, percent, and letter grade",
-    "3. What the team did well",
-    "4. Priority opportunities",
-    "5. Recommended next steps",
-    "6. A short positive closing note",
-    "Make it clean enough to turn into a PDF or email update.",
+    "1. Audit Overview",
+    "2. Score and Grade",
+    "3. Wins",
+    "4. Focus Areas",
+    "5. Recommended Next Steps",
+    "6. Closing Note",
+    "Under Audit Overview, write 2 short paragraphs maximum.",
+    "Under Score and Grade, show the score, percent, grade, and section scores.",
+    "Under Wins, list 3 to 5 bullets based only on strong items or positive notes.",
+    "Under Focus Areas, list 3 to 5 bullets based only on below-standard items or caution notes.",
+    "Under Recommended Next Steps, list 3 to 5 practical manager actions tied directly to the audit findings.",
+    "Under Closing Note, write 1 short encouraging paragraph.",
+    "When possible, mention the exact item name and score in parentheses like (3/5).",
+    "If there are fewer than 3 items for Wins or Focus Areas, include only the available valid items and do not make extras up.",
+    "Keep the full report tight enough to fit comfortably into a 1-page PDF when possible.",
     "",
     "AUDIT DATA",
     `Audit name: ${state.checklistLabel}`,
@@ -1041,6 +1057,7 @@ function openSummaryWindow(autoPrint) {
 }
 
 function buildManagerHtmlDocument(report) {
+  const logoSrc = new URL("noodles-official-logo.png", window.location.href).href;
   const sectionCards = report.sections.map((section) => {
     const percent = section.possible ? Math.round((section.earned / section.possible) * 100) : 0;
     return `
@@ -1058,29 +1075,32 @@ function buildManagerHtmlDocument(report) {
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(state.checklistLabel)} Summary</title>
-  <style>
-    :root {
-      --ink: #2f1a0d;
-      --muted: #72513b;
-      --accent: #a63c06;
-      --surface: #fffaf5;
-      --line: rgba(97, 36, 11, 0.12);
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Aptos, "Trebuchet MS", "Segoe UI", sans-serif;
-      color: var(--ink);
-      background: linear-gradient(180deg, #fff6e6, #fffdf9);
-    }
-    main {
-      width: min(980px, calc(100vw - 32px));
-      margin: 24px auto;
-      padding: 28px;
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${escapeHtml(state.checklistLabel)} Summary</title>
+    <style>
+      :root {
+        --ink: #2f1a0d;
+        --muted: #72513b;
+        --accent: #c54127;
+        --accent-dark: #8b2c1a;
+        --surface: #fffaf4;
+        --line: rgba(114, 44, 22, 0.12);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Aptos, "Trebuchet MS", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(255,255,255,0.82), transparent 24%),
+          linear-gradient(180deg, #fff2df, #fffdf9);
+      }
+      main {
+        width: min(980px, calc(100vw - 32px));
+        margin: 24px auto;
+        padding: 28px;
       border-radius: 28px;
       background: var(--surface);
       border: 1px solid var(--line);
@@ -1091,19 +1111,45 @@ function buildManagerHtmlDocument(report) {
       grid-template-columns: 1.1fr 0.9fr;
       align-items: start;
     }
-    .eyebrow {
-      margin: 0 0 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      font-size: 0.75rem;
-      color: var(--muted);
-      font-weight: 800;
-    }
-    h1, h2, h3, p { margin-top: 0; }
-    h1 { margin-bottom: 10px; font-size: 2.4rem; line-height: 1; }
-    .lede { color: var(--muted); line-height: 1.6; }
-    .score-card {
-      padding: 22px;
+      .eyebrow {
+        margin: 0 0 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        font-size: 0.75rem;
+        color: var(--muted);
+        font-weight: 800;
+      }
+      .brand-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .brand-row img {
+        height: 48px;
+        width: auto;
+      }
+      .brand-tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: rgba(197, 65, 39, 0.08);
+        border: 1px solid rgba(197, 65, 39, 0.14);
+        color: var(--accent-dark);
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { margin-bottom: 10px; font-size: 2.4rem; line-height: 1; }
+      .lede { color: var(--muted); line-height: 1.6; }
+      .score-card {
+        padding: 22px;
       border-radius: 24px;
       background: #fff;
       border: 1px solid var(--line);
@@ -1119,15 +1165,16 @@ function buildManagerHtmlDocument(report) {
       line-height: 1;
       font-weight: 800;
     }
-    .grade {
-      min-width: 96px;
-      padding: 16px 18px;
-      border-radius: 20px;
-      background: rgba(166, 60, 6, 0.12);
-      text-align: center;
-      font-size: 2rem;
-      font-weight: 800;
-    }
+      .grade {
+        min-width: 96px;
+        padding: 16px 18px;
+        border-radius: 20px;
+        background: rgba(197, 65, 39, 0.12);
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--accent-dark);
+      }
     .meta {
       display: grid;
       gap: 10px;
@@ -1209,6 +1256,10 @@ function buildManagerHtmlDocument(report) {
   <main>
     <div class="top">
       <section>
+        <div class="brand-row">
+          <img src="${escapeHtml(logoSrc)}" alt="Noodles & Company">
+          <span class="brand-tag">Hartford Ops Audit</span>
+        </div>
         <p class="eyebrow">Manager Summary</p>
         <h1>${escapeHtml(state.checklistLabel)}</h1>
         <p class="lede">${escapeHtml(report.overview)}</p>

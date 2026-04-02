@@ -1,4 +1,4 @@
-const CACHE_NAME = "noodles-checkpoint-audit-v3";
+const CACHE_NAME = "noodles-checkpoint-audit-v4";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const APP_FILES = [
   "./app.js",
   "./manifest.webmanifest",
   "./icon.svg",
+  "./noodles-official-logo.png",
   "./apple-touch-icon.png",
   "./icon-192.png",
   "./icon-512.png"

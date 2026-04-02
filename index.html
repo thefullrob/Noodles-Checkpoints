@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#a63c06">
+  <meta name="theme-color" content="#c54127">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Noodles Audit">
@@ -17,6 +17,10 @@
   <div class="page-shell">
     <header class="hero">
       <div class="hero-copy">
+        <div class="hero-brand">
+          <img class="hero-logo" src="noodles-official-logo.png" alt="Noodles & Company">
+          <span class="brand-tag">Hartford Ops Audit</span>
+        </div>
         <p class="eyebrow">Phone-first Audit Tool</p>
         <h1>Noodles Checkpoint Audit</h1>
         <p class="hero-text">
@@ -51,7 +55,13 @@
             </label>
             <label>
               <span>Location</span>
-              <input id="location-name" type="text" placeholder="Store or site">
+              <select id="location-name">
+                <option value="">Select location</option>
+                <option value="Bishops Corner">Bishops Corner</option>
+                <option value="Southington">Southington</option>
+                <option value="Manchester">Manchester</option>
+                <option value="Middletown">Middletown</option>
+              </select>
             </label>
             <label>
               <span>Shift</span>
