@@ -59,7 +59,6 @@ const els = {
   primaryShareButton: document.getElementById("primary-share-button"),
   summaryButton: document.getElementById("summary-button"),
   emailButton: document.getElementById("email-button"),
-  shareButton: document.getElementById("share-button"),
   printButton: document.getElementById("print-button"),
   chatgptButton: document.getElementById("chatgpt-button"),
   openChatgptButton: document.getElementById("open-chatgpt-button"),
@@ -119,12 +118,6 @@ function bindEvents() {
   els.printButton.addEventListener("click", () => openSummaryWindow(true));
   els.chatgptButton.addEventListener("click", copyForChatGPT);
   els.openChatgptButton.addEventListener("click", openChatGPT);
-
-  if (navigator.share) {
-    els.shareButton.addEventListener("click", shareSummary);
-  } else {
-    els.shareButton.classList.add("hidden");
-  }
 
   for (const [key, input] of Object.entries({
     auditDate: els.auditDate,
