@@ -57,7 +57,7 @@ const els = {
   importPasteButton: document.getElementById("import-paste-button"),
   cancelPasteButton: document.getElementById("cancel-paste-button"),
   exportButton: document.getElementById("export-button"),
-  stickyExportButton: document.getElementById("sticky-export-button"),
+  clearAuditButton: document.getElementById("clear-audit-button"),
   downloadTemplateButton: document.getElementById("download-template-button"),
   resetDemoButton: document.getElementById("reset-demo-button"),
   jumpButton: document.getElementById("jump-button"),
@@ -130,7 +130,7 @@ function bindEvents() {
     els.pasteInput.value = "";
   });
   els.exportButton.addEventListener("click", exportAudit);
-  els.stickyExportButton.addEventListener("click", exportAudit);
+  els.clearAuditButton.addEventListener("click", clearAuditData);
   els.downloadTemplateButton.addEventListener("click", downloadTemplate);
   els.resetDemoButton.addEventListener("click", () => {
     setChecklist(BUILT_IN_CHECKLIST, BUILT_IN_LABEL);
@@ -170,6 +170,16 @@ function bindEvents() {
     event.preventDefault();
     deferredInstallPrompt = event;
     els.installButton.classList.remove("hidden");
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      persistDraft(true);
+    }
+  });
+
+  window.addEventListener("pagehide", () => {
+    persistDraft(true);
   });
 }
 
@@ -400,7 +410,32 @@ function setChecklist(sourceRows, label) {
   renderAll();
 }
 
-function persistDraft() {
+function clearAuditData() {
+  const confirmed = window.confirm(
+    "Are you sure you want to clear this audit? This will remove all scores, notes, and audit details for the current checklist."
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  localStorage.removeItem(getDraftStorageKey());
+  state.responses = {};
+  state.metadata = {
+    auditName: state.checklistLabel,
+    auditDate: new Date().toISOString().slice(0, 10),
+    auditorName: "",
+    locationName: "",
+    shiftName: "",
+    recipientEmail: ""
+  };
+
+  persistDraft(true);
+  renderAll();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  alert("The audit was cleared and is ready for a new walkthrough.");
+}
+
+function persistDraft(silent = false) {
   localStorage.setItem(
     getDraftStorageKey(),
     JSON.stringify({
@@ -413,7 +448,7 @@ function persistDraft() {
     clearTimeout(autosaveTimer);
   }
 
-  updateAutosaveStatus("Autosaved");
+  updateAutosaveStatus(silent ? "Saved" : "Autosaved");
   autosaveTimer = setTimeout(() => {
     updateAutosaveStatus("Autosave ready");
   }, 1200);
