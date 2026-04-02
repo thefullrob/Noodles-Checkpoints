@@ -62,6 +62,7 @@ const els = {
   shareButton: document.getElementById("share-button"),
   printButton: document.getElementById("print-button"),
   chatgptButton: document.getElementById("chatgpt-button"),
+  openChatgptButton: document.getElementById("open-chatgpt-button"),
   sectionTemplate: document.getElementById("section-template"),
   itemTemplate: document.getElementById("item-template")
 };
@@ -117,6 +118,7 @@ function bindEvents() {
   els.emailButton.addEventListener("click", emailSummary);
   els.printButton.addEventListener("click", () => openSummaryWindow(true));
   els.chatgptButton.addEventListener("click", copyForChatGPT);
+  els.openChatgptButton.addEventListener("click", openChatGPT);
 
   if (navigator.share) {
     els.shareButton.addEventListener("click", shareSummary);
@@ -1049,13 +1051,18 @@ async function copyForChatGPT() {
   const copied = await copyText(prompt);
 
   if (copied) {
-    window.open("https://chatgpt.com/", "_blank", "noopener");
-    alert("The ChatGPT brief was copied to your clipboard. Paste it into ChatGPT and ask it to turn the report into a polished PDF summary.");
+    els.openChatgptButton.classList.remove("hidden");
+    alert("The ChatGPT brief was copied to your clipboard. Tap Open ChatGPT if you want to paste it there now.");
     return;
   }
 
+  els.openChatgptButton.classList.add("hidden");
   downloadTextFile("chatgpt-audit-brief.txt", prompt, "text/plain;charset=utf-8");
   alert("Clipboard access was blocked, so I downloaded the ChatGPT brief instead.");
+}
+
+function openChatGPT() {
+  window.open("https://chatgpt.com/", "_blank", "noopener");
 }
 
 function openSummaryWindow(autoPrint) {
