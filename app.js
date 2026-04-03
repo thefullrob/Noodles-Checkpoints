@@ -15,11 +15,16 @@ const LOCATION_EMAILS = {
   Manchester: "manchester@hartfordnoodles.com",
   Middletown: "middletown@hartfordnoodles.com"
 };
+const PHOTO_DB_NAME = "noodles-checkpoint-audit-photos";
+const PHOTO_STORE_NAME = "photos";
+const PHOTO_MAX_DIMENSION = 1400;
+const PHOTO_QUALITY = 0.82;
 
 const state = {
   checklist: [],
   checklistLabel: BUILT_IN_LABEL,
   responses: {},
+  photoData: {},
   metadata: {
     auditDate: "",
     auditorName: "",
@@ -68,11 +73,13 @@ const els = {
 
 let deferredInstallPrompt = null;
 let autosaveTimer = null;
+let photoDbPromise = null;
 
 initialize();
 
-function initialize() {
+async function initialize() {
   hydrateState();
+  await hydratePhotos();
   bindEvents();
   renderAll();
   registerServiceWorker();
@@ -100,11 +107,54 @@ function hydrateState() {
     state.metadata = { ...state.metadata, ...draft.metadata };
   }
   if (draft?.responses) {
-    state.responses = draft.responses;
+    state.responses = normalizeResponses(draft.responses);
   }
 
   if (!state.metadata.auditDate) {
     state.metadata.auditDate = new Date().toISOString().slice(0, 10);
+  }
+}
+
+async function hydratePhotos() {
+  const referencedPhotoIds = getAllReferencedPhotoIds();
+  if (!referencedPhotoIds.length) {
+    state.photoData = {};
+    return;
+  }
+
+  try {
+    const photoRecords = await getPhotoRecords(referencedPhotoIds);
+    const availablePhotoIds = new Set();
+    state.photoData = {};
+
+    photoRecords.forEach((record) => {
+      if (record?.id && record?.dataUrl) {
+        availablePhotoIds.add(record.id);
+        state.photoData[record.id] = record.dataUrl;
+      }
+    });
+
+    let didPruneMissing = false;
+    Object.entries(state.responses).forEach(([itemId, response]) => {
+      const photos = Array.isArray(response?.photos)
+        ? response.photos.filter((photoId) => availablePhotoIds.has(photoId))
+        : [];
+
+      if ((response?.photos || []).length !== photos.length) {
+        state.responses[itemId] = {
+          ...getResponse(itemId),
+          photos
+        };
+        didPruneMissing = true;
+      }
+    });
+
+    if (didPruneMissing) {
+      persistDraft(true);
+    }
+  } catch {
+    state.photoData = {};
+    updateAutosaveStatus("Photo cache unavailable");
   }
 }
 
@@ -143,6 +193,7 @@ function bindEvents() {
 
   els.checklistContainer.addEventListener("click", handleChecklistClick);
   els.checklistContainer.addEventListener("input", handleChecklistInput);
+  els.checklistContainer.addEventListener("change", handleChecklistChange);
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -208,6 +259,9 @@ function renderItem(item) {
   const status = node.querySelector(".item-status");
   const choiceGroup = node.querySelector(".choice-group");
   const notes = node.querySelector("textarea");
+  const photoTrigger = node.querySelector(".photo-trigger");
+  const photoInput = node.querySelector(".photo-input");
+  const photoStrip = node.querySelector(".photo-strip");
 
   node.dataset.itemId = item.id;
   title.textContent = item.item;
@@ -227,6 +281,7 @@ function renderItem(item) {
   status.textContent = getStatusLabel(item);
   notes.value = response.notes || "";
   notes.placeholder = item.notesPlaceholder || "Add details if needed";
+  photoInput.setAttribute("aria-label", `Add photo for ${item.item}`);
 
   node.classList.toggle("complete", hasAnswer(item.id));
   node.classList.toggle("pending", !hasAnswer(item.id));
@@ -240,6 +295,39 @@ function renderItem(item) {
     button.classList.toggle("active", response.answer === choice.value);
     choiceGroup.appendChild(button);
   });
+
+  const photoIds = Array.isArray(response.photos) ? response.photos : [];
+  photoTrigger.querySelector("span").textContent = photoIds.length ? "Add Another Photo" : "Add Photo";
+
+  if (photoIds.length) {
+    photoStrip.classList.remove("hidden");
+    photoIds.forEach((photoId, index) => {
+      const imageSrc = state.photoData[photoId];
+      if (!imageSrc) {
+        return;
+      }
+
+      const card = document.createElement("div");
+      card.className = "photo-card";
+      card.innerHTML = `
+        <figure class="photo-thumb">
+          <img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(`${item.item} photo ${index + 1}`)}" loading="lazy">
+        </figure>
+        <div class="photo-meta">
+          <div>
+            <strong>Photo ${index + 1}</strong>
+            <div>${escapeHtml(item.section)}</div>
+          </div>
+          <button class="remove-photo-button" type="button" data-photo-id="${escapeHtml(photoId)}">Remove</button>
+        </div>
+      `;
+      photoStrip.appendChild(card);
+    });
+
+    if (!photoStrip.childElementCount) {
+      photoStrip.classList.add("hidden");
+    }
+  }
 
   return node;
 }
@@ -291,6 +379,25 @@ function fillList(listElement, items, emptyMessage) {
 }
 
 function handleChecklistClick(event) {
+  const photoTrigger = event.target.closest(".photo-trigger");
+  if (photoTrigger) {
+    const itemNode = photoTrigger.closest(".audit-item");
+    itemNode?.querySelector(".photo-input")?.click();
+    return;
+  }
+
+  const removePhotoButton = event.target.closest(".remove-photo-button");
+  if (removePhotoButton) {
+    const itemId = removePhotoButton.closest(".audit-item")?.dataset.itemId;
+    const photoId = removePhotoButton.dataset.photoId;
+    if (!itemId || !photoId) {
+      return;
+    }
+
+    void removeItemPhoto(itemId, photoId);
+    return;
+  }
+
   const button = event.target.closest(".choice-button");
   if (!button) {
     return;
@@ -332,6 +439,75 @@ function handleChecklistInput(event) {
   renderManagerSummary();
 }
 
+function handleChecklistChange(event) {
+  const photoInput = event.target.closest(".photo-input");
+  if (!photoInput) {
+    return;
+  }
+
+  void saveItemPhoto(photoInput);
+}
+
+async function saveItemPhoto(photoInput) {
+  const itemId = photoInput.closest(".audit-item")?.dataset.itemId;
+  const file = photoInput.files?.[0];
+  photoInput.value = "";
+
+  if (!itemId || !file) {
+    return;
+  }
+
+  updateAutosaveStatus("Saving photo...");
+
+  try {
+    const dataUrl = await compressImageFile(file);
+    const photoId = createPhotoId(itemId);
+    await savePhotoRecord({
+      id: photoId,
+      itemId,
+      addedAt: Date.now(),
+      dataUrl
+    });
+
+    state.photoData[photoId] = dataUrl;
+    state.responses[itemId] = {
+      ...getResponse(itemId),
+      photos: [...getResponse(itemId).photos, photoId]
+    };
+
+    persistDraft(true);
+    renderAll();
+    updateAutosaveStatus("Photo saved");
+  } catch (error) {
+    updateAutosaveStatus("Photo save failed");
+    alert(`That photo could not be saved. ${error.message || "Please try again."}`);
+  }
+}
+
+async function removeItemPhoto(itemId, photoId) {
+  const response = getResponse(itemId);
+  if (!response.photos.includes(photoId)) {
+    return;
+  }
+
+  updateAutosaveStatus("Removing photo...");
+
+  try {
+    await deletePhotoRecord(photoId);
+    delete state.photoData[photoId];
+    state.responses[itemId] = {
+      ...response,
+      photos: response.photos.filter((currentId) => currentId !== photoId)
+    };
+    persistDraft(true);
+    renderAll();
+    updateAutosaveStatus("Photo removed");
+  } catch {
+    updateAutosaveStatus("Photo remove failed");
+    alert("That photo could not be removed right now. Please try again.");
+  }
+}
+
 function handleFileImport(event) {
   const file = event.target.files?.[0];
   if (!file) {
@@ -364,16 +540,19 @@ function importPastedRows() {
   }
 }
 
-function setChecklist(sourceRows, label) {
+async function setChecklist(sourceRows, label) {
   const nextChecklist = sanitizeChecklist(sourceRows);
   if (!nextChecklist.length) {
     alert("No checklist items were found.");
     return;
   }
 
+  await deleteReferencedPhotos(getAllReferencedPhotoIds());
+
   state.checklist = nextChecklist;
   state.checklistLabel = label;
   state.responses = {};
+  state.photoData = {};
   state.metadata = {
     ...state.metadata,
     auditDate: state.metadata.auditDate || new Date().toISOString().slice(0, 10)
@@ -385,16 +564,19 @@ function setChecklist(sourceRows, label) {
   renderAll();
 }
 
-function clearAuditData() {
+async function clearAuditData() {
   const confirmed = window.confirm(
-    "Are you sure you want to clear this audit? This will remove all scores, notes, and audit details for the current checklist."
+    "Are you sure you want to clear this audit? This will remove all scores, notes, photos, and audit details for the current checklist."
   );
   if (!confirmed) {
     return;
   }
 
+  updateAutosaveStatus("Clearing audit...");
+  await deleteReferencedPhotos(getAllReferencedPhotoIds());
   localStorage.removeItem(getDraftStorageKey());
   state.responses = {};
+  state.photoData = {};
   state.metadata = {
     auditDate: new Date().toISOString().slice(0, 10),
     auditorName: "",
@@ -654,8 +836,21 @@ function groupBySection(items) {
   return sections;
 }
 
+function normalizeResponses(responses) {
+  return Object.entries(responses || {}).reduce((normalized, [itemId, response]) => {
+    normalized[itemId] = {
+      answer: typeof response?.answer === "string" ? response.answer : "",
+      notes: typeof response?.notes === "string" ? response.notes : "",
+      photos: Array.isArray(response?.photos)
+        ? response.photos.filter((photoId) => typeof photoId === "string" && photoId.trim())
+        : []
+    };
+    return normalized;
+  }, {});
+}
+
 function getResponse(itemId) {
-  return state.responses[itemId] || { answer: "", notes: "" };
+  return state.responses[itemId] || { answer: "", notes: "", photos: [] };
 }
 
 function hasAnswer(itemId) {
@@ -776,13 +971,15 @@ function buildBreakdown() {
   const zero = state.checklist.filter((item) => getResponse(item.id).answer === "0").length;
   const na = state.checklist.filter((item) => getResponse(item.id).answer === "NA").length;
   const withNotes = state.checklist.filter((item) => getResponse(item.id).notes?.trim()).length;
+  const withPhotos = state.checklist.filter((item) => getResponse(item.id).photos?.length).length;
 
   return [
     { label: "Full points", count: full },
     { label: "Partial", count: partial },
     { label: "Zero", count: zero },
     { label: "N/A", count: na },
-    { label: "With notes", count: withNotes }
+    { label: "With notes", count: withNotes },
+    { label: "With photos", count: withPhotos }
   ];
 }
 
@@ -816,8 +1013,24 @@ function buildManagerReportData() {
     })
     .slice(0, 6)
     .map((item) => formatItemSummary(item, "note"));
+  const photoItems = state.checklist
+    .filter((item) => getResponse(item.id).photos?.length)
+    .map((item) => ({
+      section: item.section,
+      item: item.item,
+      note: getResponse(item.id).notes?.trim() || "",
+      scoreLabel: getStatusLabel(item),
+      photos: getResponse(item.id).photos
+        .map((photoId, index) => ({
+          id: photoId,
+          index: index + 1,
+          src: state.photoData[photoId] || ""
+        }))
+        .filter((photo) => photo.src)
+    }))
+    .filter((item) => item.photos.length);
 
-  const overview = buildOverview(metrics, sections, focusItems.length);
+  const overview = buildOverview(metrics, sections, focusItems.length, photoItems.length);
 
   return {
     metrics,
@@ -825,11 +1038,12 @@ function buildManagerReportData() {
     strengths,
     focusItems,
     notedItems,
+    photoItems,
     overview
   };
 }
 
-function buildOverview(metrics, sections, focusCount) {
+function buildOverview(metrics, sections, focusCount, photoItemCount) {
   const strongestSection = sections
     .filter((section) => section.possible > 0)
     .sort((left, right) => (right.earned / right.possible) - (left.earned / left.possible))[0];
@@ -847,8 +1061,11 @@ function buildOverview(metrics, sections, focusCount) {
   const completionText = metrics.remainingItems
     ? `${metrics.remainingItems} item${metrics.remainingItems === 1 ? "" : "s"} still need a score.`
     : "The audit is fully scored and ready to share.";
+  const photoText = photoItemCount
+    ? `${photoItemCount} item${photoItemCount === 1 ? "" : "s"} include photo evidence.`
+    : "";
 
-  return `${state.metadata.locationName || "This location"} finished at ${metrics.earnedScore}/${metrics.possibleScore} (${metrics.roundedPercentage}%, grade ${metrics.grade}). ${focusCount} item${focusCount === 1 ? "" : "s"} fell below full points. ${completionText} ${strongestText} ${weakestText}`.trim();
+  return `${state.metadata.locationName || "This location"} finished at ${metrics.earnedScore}/${metrics.possibleScore} (${metrics.roundedPercentage}%, grade ${metrics.grade}). ${focusCount} item${focusCount === 1 ? "" : "s"} fell below full points. ${completionText} ${photoText} ${strongestText} ${weakestText}`.trim();
 }
 
 function formatItemSummary(item, mode) {
@@ -899,6 +1116,13 @@ function buildManagerPlainText(report = buildManagerReportData()) {
     report.notedItems.slice(0, 5).forEach((item) => lines.push(`- ${item}`));
   }
 
+  if (report.photoItems.length) {
+    lines.push("", "Photo evidence captured:");
+    report.photoItems.forEach((item) => {
+      lines.push(`- ${item.section}: ${item.item} (${item.scoreLabel}, ${item.photos.length} photo${item.photos.length === 1 ? "" : "s"})`);
+    });
+  }
+
   return lines.join("\n");
 }
 
@@ -932,6 +1156,11 @@ function buildChatGPTPrompt(report = buildManagerReportData()) {
   const noteLines = report.notedItems.length
     ? report.notedItems.map((item) => `- ${item}`).join("\n")
     : "- No extra notes were added.";
+  const photoLines = report.photoItems.length
+    ? report.photoItems
+      .map((item) => `- ${item.section}: ${item.item} (${item.scoreLabel}, ${item.photos.length} photo${item.photos.length === 1 ? "" : "s"})${item.note ? ` | Note: ${item.note}` : ""}`)
+      .join("\n")
+    : "- No photos were captured.";
 
   return [
     "Create a polished, manager-ready audit summary from the data below.",
@@ -981,7 +1210,12 @@ function buildChatGPTPrompt(report = buildManagerReportData()) {
     focusLines,
     "",
     "DETAILED NOTES",
-    noteLines
+    noteLines,
+    "",
+    "PHOTO EVIDENCE CAPTURED",
+    photoLines,
+    "",
+    "Important: If photo evidence is mentioned, the final PDF should include a short photo evidence section that references those items."
   ].join("\n");
 }
 
@@ -992,15 +1226,18 @@ async function emailSummary() {
   const recipient = state.metadata.recipientEmail.trim();
   const clipboardPayload = `To: ${recipient || "[add GM email]"}\nSubject: ${subject}\n\n${body}`;
   const copied = await copyText(clipboardPayload);
+  const photoNote = report.photoItems.length
+    ? " Photo details were included in the message, but the inline images stay in the PDF preview/print version."
+    : "";
 
   const gmailWindow = window.open(buildGmailComposeUrl(subject, body, recipient), "_blank");
   if (gmailWindow) {
     gmailWindow.focus();
     if (copied) {
-      alert("Opened Gmail compose and copied the email subject/body to your clipboard as a backup.");
+      alert(`Opened Gmail compose and copied the email subject/body to your clipboard as a backup.${photoNote}`);
     } else {
       downloadTextFile("audit-email.txt", clipboardPayload, "text/plain;charset=utf-8");
-      alert("Opened Gmail compose. I also downloaded the email text because clipboard access was blocked.");
+      alert(`Opened Gmail compose. I also downloaded the email text because clipboard access was blocked.${photoNote}`);
     }
     return;
   }
@@ -1011,24 +1248,33 @@ async function emailSummary() {
   window.location.href = `mailto:${toParam}?subject=${subjectParam}&body=${bodyParam}`;
 
   if (copied) {
-    alert("I copied the email subject/body to your clipboard in case your desktop mail app does not open cleanly.");
+    alert(`I copied the email subject/body to your clipboard in case your desktop mail app does not open cleanly.${photoNote}`);
   } else {
     downloadTextFile("audit-email.txt", clipboardPayload, "text/plain;charset=utf-8");
-    alert("Your browser blocked the web compose window, so I tried your desktop mail app and downloaded the email text as a backup.");
+    alert(`Your browser blocked the web compose window, so I tried your desktop mail app and downloaded the email text as a backup.${photoNote}`);
   }
 }
 
 async function shareReport() {
+  const report = buildManagerReportData();
+  if (report.photoItems.length) {
+    const shared = await shareRichReport(report);
+    if (!shared) {
+      openSummaryWindow(false);
+      alert("Photo evidence is included in the PDF preview. Use Preview PDF or Print / PDF to share the full report with photos.");
+    }
+    return;
+  }
+
   if (navigator.share) {
-    await shareSummary();
+    await shareSummary(report);
     return;
   }
 
   await emailSummary();
 }
 
-async function shareSummary() {
-  const report = buildManagerReportData();
+async function shareSummary(report = buildManagerReportData()) {
   try {
     await navigator.share({
       title: buildEmailSubject(report),
@@ -1036,6 +1282,28 @@ async function shareSummary() {
     });
   } catch {
     // User cancelled or share target failed.
+  }
+}
+
+async function shareRichReport(report) {
+  if (!navigator.share || typeof navigator.canShare !== "function") {
+    return false;
+  }
+
+  try {
+    const file = buildReportHtmlFile(report);
+    if (!navigator.canShare({ files: [file] })) {
+      return false;
+    }
+
+    await navigator.share({
+      title: buildEmailSubject(report),
+      text: "Attached is the full audit report with photo evidence.",
+      files: [file]
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -1073,7 +1341,7 @@ function openSummaryWindow(autoPrint) {
   if (autoPrint) {
     summaryWindow.setTimeout(() => {
       summaryWindow.print();
-    }, 250);
+    }, report.photoItems.length ? 600 : 250);
   }
 }
 
@@ -1093,6 +1361,31 @@ function buildManagerHtmlDocument(report) {
   const strengths = renderHtmlList(report.strengths);
   const focusItems = renderHtmlList(report.focusItems);
   const noteItems = renderHtmlList(report.notedItems);
+  const photoSection = report.photoItems.length
+    ? `
+    <section class="photo-section">
+      <p class="eyebrow">Photo Evidence</p>
+      <div class="photo-grid">
+        ${report.photoItems.map((item) => `
+          <article class="photo-panel">
+            <div class="photo-copy">
+              <h3>${escapeHtml(item.item)}</h3>
+              <p><strong>${escapeHtml(item.section)}</strong> &middot; ${escapeHtml(item.scoreLabel)}</p>
+              ${item.note ? `<p>${escapeHtml(item.note)}</p>` : ""}
+            </div>
+            <div class="photo-panel-grid">
+              ${item.photos.map((photo) => `
+                <figure class="photo-figure">
+                  <img src="${escapeHtml(photo.src)}" alt="${escapeHtml(`${item.item} photo ${photo.index}`)}">
+                  <figcaption>Photo ${photo.index}</figcaption>
+                </figure>
+              `).join("")}
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    </section>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1244,6 +1537,47 @@ function buildManagerHtmlDocument(report) {
     .list-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+    .photo-section {
+      margin-top: 22px;
+    }
+    .photo-grid {
+      display: grid;
+      gap: 16px;
+    }
+    .photo-panel {
+      padding: 18px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+    .photo-copy p {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .photo-panel-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-top: 14px;
+    }
+    .photo-figure {
+      margin: 0;
+    }
+    .photo-figure img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #f6ecdf;
+    }
+    .photo-figure figcaption {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
     ul {
       margin: 0;
       padding-left: 20px;
@@ -1323,6 +1657,8 @@ function buildManagerHtmlDocument(report) {
       </article>
     </section>
 
+    ${photoSection}
+
     <p class="footer-note">Generated from the Noodles Checkpoint Audit app.</p>
   </main>
 </body>
@@ -1332,6 +1668,124 @@ function buildManagerHtmlDocument(report) {
 function renderHtmlList(items) {
   const safeItems = items.length ? items : ["No items in this section."];
   return `<ul>${safeItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+function buildReportHtmlFile(report) {
+  const html = buildManagerHtmlDocument(report);
+  const fileName = `${slugify(state.metadata.locationName || state.checklistLabel || "audit") || "audit"}-summary.html`;
+  return new File([html], fileName, { type: "text/html" });
+}
+
+function getAllReferencedPhotoIds() {
+  return Object.values(state.responses).flatMap((response) => Array.isArray(response?.photos) ? response.photos : []);
+}
+
+function createPhotoId(itemId) {
+  return `${itemId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function compressImageFile(file) {
+  const image = await loadImageElement(file);
+  const scale = Math.min(1, PHOTO_MAX_DIMENSION / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+  const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+  const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Image processing is not available in this browser.");
+  }
+
+  context.drawImage(image, 0, 0, width, height);
+
+  return canvas.toDataURL("image/jpeg", PHOTO_QUALITY);
+}
+
+function loadImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("The selected image could not be read."));
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("The selected image could not be processed."));
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function getPhotoDb() {
+  if (!("indexedDB" in window)) {
+    return Promise.reject(new Error("This browser does not support temporary photo storage."));
+  }
+
+  if (!photoDbPromise) {
+    photoDbPromise = new Promise((resolve, reject) => {
+      const request = window.indexedDB.open(PHOTO_DB_NAME, 1);
+
+      request.onerror = () => reject(request.error || new Error("The photo database could not be opened."));
+      request.onupgradeneeded = () => {
+        const database = request.result;
+        if (!database.objectStoreNames.contains(PHOTO_STORE_NAME)) {
+          database.createObjectStore(PHOTO_STORE_NAME, { keyPath: "id" });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+    });
+  }
+
+  return photoDbPromise;
+}
+
+async function savePhotoRecord(record) {
+  const database = await getPhotoDb();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(PHOTO_STORE_NAME, "readwrite");
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error || new Error("The photo could not be saved."));
+    transaction.objectStore(PHOTO_STORE_NAME).put(record);
+  });
+}
+
+async function getPhotoRecords(photoIds) {
+  const uniqueIds = [...new Set(photoIds)];
+  if (!uniqueIds.length) {
+    return [];
+  }
+
+  const database = await getPhotoDb();
+  return Promise.all(uniqueIds.map((photoId) => new Promise((resolve, reject) => {
+    const transaction = database.transaction(PHOTO_STORE_NAME, "readonly");
+    const request = transaction.objectStore(PHOTO_STORE_NAME).get(photoId);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error || new Error("A saved photo could not be loaded."));
+  })));
+}
+
+async function deletePhotoRecord(photoId) {
+  const database = await getPhotoDb();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(PHOTO_STORE_NAME, "readwrite");
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error || new Error("The photo could not be removed."));
+    transaction.objectStore(PHOTO_STORE_NAME).delete(photoId);
+  });
+}
+
+async function deleteReferencedPhotos(photoIds) {
+  const uniqueIds = [...new Set(photoIds)];
+  if (!uniqueIds.length) {
+    return;
+  }
+
+  try {
+    await Promise.all(uniqueIds.map((photoId) => deletePhotoRecord(photoId)));
+  } catch {
+    // If photo cleanup fails, keep the audit reset moving.
+  }
 }
 
 async function copyText(text) {
@@ -1503,3 +1957,4 @@ function registerServiceWorker() {
     });
   }
 }
+

@@ -238,6 +238,16 @@
         </div>
         <p class="item-details hidden"></p>
       </div>
+      <div class="item-tools">
+        <button class="item-tool-button photo-trigger" type="button" aria-label="Add photo for this item">
+          <svg class="item-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 4 7.8 6H5.5A2.5 2.5 0 0 0 3 8.5v8A2.5 2.5 0 0 0 5.5 19h13a2.5 2.5 0 0 0 2.5-2.5v-8A2.5 2.5 0 0 0 18.5 6h-2.3L15 4H9Zm3 4.2a4.3 4.3 0 1 1 0 8.6 4.3 4.3 0 0 1 0-8.6Zm0 1.8a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" fill="currentColor"></path>
+          </svg>
+          <span>Add Photo</span>
+        </button>
+        <input class="photo-input" type="file" accept="image/*" capture="environment" hidden>
+      </div>
+      <div class="photo-strip hidden"></div>
       <div class="choice-group" role="group" aria-label="Checkpoint choices"></div>
       <label class="notes-field">
         <span>Notes</span>
